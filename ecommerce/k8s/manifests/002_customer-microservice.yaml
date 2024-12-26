@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service-deployment
+  namespace: ecommerce
+  labels:
+    app: customer
+    version: 0.0.1-SNAPSHOT
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: customer
+  template:
+    metadata:
+      labels:
+        app: customer
+        version: 0.0.1-SNAPSHOT
+    spec:
+      containers:
+        - name: customer
+          image: customers:0.0.1-SNAPSHOT
+          imagePullPolicy: Never # Use local image and not pull from registry
+          ports:
+            - containerPort: 5001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-service
+  namespace: ecommerce
+  labels:
+    app: customer
+    service: customer
+    version: 0.0.1-SNAPSHOT
+spec:
+  selector:
+    app: customer
+    version: 0.0.1-SNAPSHOT
+  ports:
+    - port: 5001
+      name: tcp
+      targetPort: 5001
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: customer-service-http-routes
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: ecommerce-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/customers/  # Matches paths that start with /api/v1/customers
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1/customers # Remove the '/api' prefix
+      backendRefs:
+        - name: customer-service
+          port: 5001

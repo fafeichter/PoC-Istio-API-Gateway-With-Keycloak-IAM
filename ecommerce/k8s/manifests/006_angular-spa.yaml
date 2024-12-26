@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-spa-deployment
+  namespace: ecommerce
+  labels:
+    app: angular
+    version: 0.0.1-SNAPSHOT
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: angular
+  template:
+    metadata:
+      labels:
+        app: angular
+        version: 0.0.1-SNAPSHOT
+    spec:
+      containers:
+        - name: angular
+          image: angular:0.0.1-SNAPSHOT
+          imagePullPolicy: Never # Use local image and not pull from registry
+          ports:
+            - containerPort: 80
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            timeoutSeconds: 3
+            failureThreshold: 60 # Nginx starts very fast
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 100
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 100
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: angular-spa-service
+  namespace: ecommerce
+  labels:
+    app: angular
+    service: angular
+    version: 0.0.1-SNAPSHOT
+spec:
+  selector:
+    app: angular
+    version: 0.0.1-SNAPSHOT
+  ports:
+    - port: 80
+      name: tcp
+      targetPort: 80
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: angular-spa-http-routes
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: ecommerce-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /  # Matches paths that start with /v1/orders
+      backendRefs:
+        - name: angular-spa-service
+          port: 80

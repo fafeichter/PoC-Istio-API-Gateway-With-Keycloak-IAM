@@ -1,0 +1,51 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ecommerce-gateway
+  namespace: ecommerce
+  labels:
+    app: ecommerce-gateway
+    version: 1.0.0
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http-listener
+      port: 4000
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+---
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ecommerce-gateway-autoscaler
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ecommerce-gateway-istio
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ecommerce-gateway-disruption-budget
+  namespace: ecommerce
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      istio.io/gateway-name: ecommerce-gateway

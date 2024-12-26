@@ -1,0 +1,13 @@
+server:
+  port: 5002
+  servlet:
+    context-path: /v1/orders
+
+spring:
+  application:
+    name: orders
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://keycloak.ecommerce.svc.cluster.local:8080/realms/ecommerce/protocol/openid-connect/certs

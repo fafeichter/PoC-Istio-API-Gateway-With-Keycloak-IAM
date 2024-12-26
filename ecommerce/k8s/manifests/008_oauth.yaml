@@ -1,0 +1,55 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-authentication-method
+  namespace: ecommerce
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: ecommerce-gateway
+  jwtRules:
+    - issuer: http://localhost:8080/realms/ecommerce
+      jwksUri: http://keycloak.ecommerce.svc.cluster.local:8080/realms/ecommerce/protocol/openid-connect/certs
+      forwardOriginalToken: true
+
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: api-authorization-policy
+  namespace: ecommerce
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: ecommerce-gateway
+  rules:
+    - from:
+        - source:
+            requestPrincipals: [ "*" ]  # Allow requests with a valid JWT to /api/*
+      to:
+        - operation:
+            paths: [ "/api/*" ]
+  action: ALLOW
+
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: angular-spa-authorization-policy
+  namespace: ecommerce
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: ecommerce-gateway
+  rules:
+    - to:
+        - operation:
+            paths: # Allow requests to the root path / without authentication
+              - "/"                  # Allow root path for the SPA
+              - "*.css"             # Match all CSS files
+              - "*.js"              # Match all JavaScript files
+              - "/favicon.ico"       # Favicon
+  action: ALLOW

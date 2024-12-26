@@ -1,0 +1,94 @@
+<div *ngIf="isAuthenticated; else notAuthenticated">
+  <h2>Welcome!</h2>
+  <p>You are currently logged in as: <strong>{{ userName }}</strong>. 😊</p>
+
+  <h3>Logout</h3>
+  <p>
+    Click the button below to log out of your Keycloak Single Sign-On (SSO) session and this application.
+  </p>
+  <button (click)="logout()" class="btn btn-outline-primary">Logout</button>
+
+  <hr/>
+
+  <h3>Token Refresh</h3>
+  <p>
+    The JSON Web Token (JWT) has a lifespan of one minute and is refreshed automatically 30 seconds prior to its
+    expiration. The new token can be retrieved using the refresh token.
+  </p>
+  <button (click)="forceRefreshSession()" class="btn btn-outline-secondary btn-sm">Manually Refresh JWT</button>
+
+  <h3>User Information</h3>
+  <p>
+    The JWT contains the user's information and is stored in the session storage of your browser.
+  </p>
+  <p class="oauth-token">Access Token: <i>{{ accessToken }}</i></p>
+  <p class="oauth-token">Refresh Token: <i>{{ refreshToken }}</i></p>
+
+  <p>
+    You can decode the tokens using <a href="https://jwt.io/" target="_blank">jwt.io</a>.
+  </p>
+
+  <h3>Data Loading</h3>
+  <p>
+    This feature allows you to load data from the backend. All requests are routed through the API gateway, which, along
+    with the microservices, requires a valid JWT for data retrieval. The same JWT can be utilized for
+    microservice-to-microservice communication.
+  </p>
+  <button (click)="loadDataFromBackend()" class="btn btn-outline-secondary btn-sm">Load Data from Backend</button>
+  <p>Result: {{ greeting }}</p>
+
+  <hr/>
+
+  <h3>Interesting Behavior 💡</h3>
+  <ol>
+    <li>Refreshing the page maintains the current user session.</li>
+    <li>After logging in, if you open the same page in a <a href="/" target="_blank">new tab</a>:
+      <ul>
+        <li>You will not be logged in.</li>
+        <li>A new user session will be created.</li>
+        <li>Upon logging in, Keycloak recognizes the existing SSO session via the session cookie associated with the
+          Keycloak domain.
+          <ul>
+            <li>This process eliminates the need to re-enter your credentials! 😊</li>
+            <li>The redirects (or opening and closing the popup) occur so quickly that you may not even notice being
+              redirected to Keycloak and back to the SPA.
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li>Opening the same page in a new window using the
+      <button (click)="openWindow()" class="btn btn-outline-secondary btn-sm">window.open(url)</button>
+      function will result in:
+      <ul>
+        <li>The session from the parent window being copied into the new window's session.</li>
+        <li>The child window inheriting a copy of the parent session, keeping you logged in without further action.</li>
+        <li>However, please note that these will be two distinct user sessions:
+          <ul>
+            <li>If you log out from one tab, the session in the other tab will remain active.</li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ol>
+</div>
+
+<ng-template #notAuthenticated>
+  <p>You are NOT authenticated. 😱</p>
+
+  <h3>Login Option #1: Redirect</h3>
+  <p>
+    This option will redirect you to the Keycloak login page. After successful authentication, you will be redirected
+    back to the SPA, where the entire Angular context will be reinitialized.
+  </p>
+  <button (click)="loginWithRedirect()" class="btn btn-outline-primary">Login with Redirect</button>
+
+  <h3>Login Option #2: Popup</h3>
+  <p>
+    This option opens the Keycloak login page in a new window, allowing the SPA to remain active in the original window.
+    After successful login, the SPA will be notified, and no reinitialization of the Angular context is necessary.
+  </p>
+  <button (click)="loginWithPopup()" class="btn btn-outline-primary">Login with Popup</button>
+
+  <hr/>
+</ng-template>

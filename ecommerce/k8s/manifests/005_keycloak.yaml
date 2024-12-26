@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-deployment
+  namespace: ecommerce
+  labels:
+    app: keycloak
+    version: 26.0.1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+      version: 26.0.1
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        version: 26.0.1
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0.1
+          args:
+            - start-dev
+            - --import-realm
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: "admin"
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: "admin"
+            - name: KC_PROXY
+              value: "edge"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://keycloak-postgres-service:5432/keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              value: keycloak
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: http-management
+              containerPort: 9000
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 100 # Keycloak needs a few minutes to start
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 100 # Keycloak needs a few minutes to start
+          volumeMounts:
+            - name: keycloak-volume
+              mountPath: /opt/keycloak/data/import/ecommerce-realm.json
+      volumes:
+        - name: keycloak-volume
+          hostPath:
+            path: /mnt/data/ecommerce-realm.json
+            type: File
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ecommerce
+  labels:
+    app: keycloak-service
+    service: keycloak
+    version: 26.0.1
+spec:
+  ports:
+    - port: 8080 # External port (what clients will connect to)
+      name: http
+      targetPort: 8080 # Port inside the container
+    - port: 9000 # External port (what clients will connect to)
+      name: http-management
+      targetPort: 9000 # Port inside the container
+  selector:
+    app: keycloak
+  type: LoadBalancer
